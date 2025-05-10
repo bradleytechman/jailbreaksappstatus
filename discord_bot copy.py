@@ -42,6 +42,8 @@ async def on_ready():
         logger.error(f"Failed to sync slash commands: {str(e)}")
 
 # Slash command: Check jailbreaks.app status
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 @tree.command(name="status", description="Check the status of jailbreaks.app")
 async def status(interaction: discord.Interaction):
     async with aiohttp.ClientSession() as session:
