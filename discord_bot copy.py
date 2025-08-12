@@ -10,74 +10,109 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Load environment variables from .env file
 load_dotenv()
+DISCORD_BOT_TOKEN = os.getenv('DISCORD_BOT_TOKEN')
+if not DISCORD_BOT_TOKEN:
+    logger.error("DISCORD_BOT_TOKEN not found in .env file")
+    exit(1)
 
-# Initialize the bot with intents
+
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
-# Create a View with a Website button
+
 class StatusView(View):
     def __init__(self):
-        super().__init__(timeout=None)  # No timeout for persistent buttons
-        website_button = Button(
+        super().__init__(timeout=None)
+        self.add_item(Button(
             label="Website",
             style=ButtonStyle.link,
             url="https://jailbreaks.app"
-        )
-        self.add_item(website_button)
+        ))
 
-# Event: Bot is ready
+# Bot ready
 @client.event
 async def on_ready():
     logger.info(f'Logged in as {client.user.name}')
     try:
-        # Sync global slash commands
         await tree.sync()
-        logger.info("Global slash commands synced successfully")
+        logger.info("Global slash commands synced")
     except Exception as e:
-        logger.error(f"Failed to sync slash commands: {str(e)}")
+        logger.error(f"Failed to sync commands: {e}")
 
-# Slash command: Check jailbreaks.app status
+
+async def send_error_response(interaction: discord.Interaction, message: str):
+    error_msg = f"{message}. :( If this continues to happen, please make an issue at https://github.com/bradleytechman/jailbreaksappstatus/issues"
+    try:
+        await interaction.response.send_message(error_msg, ephemeral=True)
+    except discord.errors.InteractionResponded:
+        await interaction.followup.send(error_msg, ephemeral=True)
+
+
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-@tree.command(name="status", description="Check the status of jailbreaks.app")
+@tree.command(name="status", description="Check jailbreaks.app status")
 async def status(interaction: discord.Interaction):
     async with aiohttp.ClientSession() as session:
         try:
             async with session.get('https://api.jailbreaks.app/status', timeout=10) as response:
                 if response.status == 200:
                     data = await response.json()
-                    status = data.get('status', 'Unknown').lower()  # Case-insensitive status check
-                    if status == 'signed':
-                        status_message = "✅ Jailbreaks.app is signed right now. This means you **can** install apps"
-                    else:
-                        status_message = "❌ Jailbreaks.app is not signed right now. This means you **can not** install apps"
-                    # Send message with Website button
-                    view = StatusView()
-                    await interaction.response.send_message(status_message, view=view)
-                else:
-                    await interaction.response.send_message(
-                        f"Failed to fetch status. HTTP Status: {response.status}. Please ping @bradleytechman for assistance."
+                    status = data.get('status', 'Unknown').lower()
+                    message = (
+                        "✅ Jailbreaks.app is signed right now. This means you **can** install apps" 
+                        if status == 'signed' 
+                        else "❌ Jailbreaks.app is not signed right now. This means you **can not** install apps"
                     )
+                    await interaction.response.send_message(message, view=StatusView())
+                else:
+                    await send_error_response(interaction, f"Failed to fetch status (HTTP {response.status})")
         except aiohttp.ClientError as e:
-            logger.error(f"HTTP error occurred: {str(e)}")
-            await interaction.response.send_message(
-                f"Failed to connect to jailbreaks.app API. Please ping @bradleytechman for assistance."
-            )
+            logger.error(f"HTTP error: {e}")
+            await send_error_response(interaction, "Failed to connect to jailbreaks.app API")
         except Exception as e:
-            logger.error(f"An error occurred: {str(e)}")
-            await interaction.response.send_message(
-                f"An error occurred: {str(e)}. Please ping @bradleytechman for assistance."
-            )
+            logger.error(f"Unexpected error: {e}")
+            await send_error_response(interaction, f"Unexpected error: {e}")
 
-# Run the bot with token from environment variable
-try:
-    client.run(os.getenv('DISCORD_BOT_TOKEN'))
-except discord.errors.LoginFailure:
-    logger.error("Invalid bot token provided. Please check your DISCORD_BOT_TOKEN in the .env file.")
-except Exception as e:
-    logger.error(f"Failed to start bot: {str(e)}")
+
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+@tree.command(name="certinfo", description="Get current certificate information")
+async def certinfo(interaction: discord.Interaction):
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get('https://api.jailbreaks.app/info', timeout=10) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    cert_name = data.get('name', 'Unknown')
+                    cert_status = data.get('status', 'Unknown')
+                    cert_expires = data.get('expirationDate', 'Unknown')
+                    message = (
+                        f"📜 **Certificate**: {cert_name}\n"
+                        f"**Status**: {cert_status}\n"
+                        f"**Expires**: {cert_expires}\n"
+                        f"(Note: Expiry date does not correlate to when it is revoked; it can be revoked by apple at **any** time.)"
+                    )
+                    await interaction.response.send_message(message)
+                else:
+                    await send_error_response(interaction, f"Failed to fetch certificate info (HTTP {response.status})")
+        except aiohttp.ClientError as e:
+            logger.error(f"HTTP error: {e}")
+            await send_error_response(interaction, "Failed to connect to jailbreaks.app API")
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            await send_error_response(interaction, f"Unexpected error: {e}")
+
+
+def run_bot():
+    try:
+        client.run(DISCORD_BOT_TOKEN)
+    except discord.errors.LoginFailure:
+        logger.error("Invalid bot token. Check DISCORD_BOT_TOKEN in .env file")
+    except Exception as e:
+        logger.error(f"Failed to start bot: {e}")
+
+if __name__ == "__main__":
+    run_bot()
