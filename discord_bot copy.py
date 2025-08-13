@@ -89,11 +89,12 @@ async def certinfo(interaction: discord.Interaction):
                     cert_name = data.get('name', 'Unknown')
                     cert_status = data.get('status', 'Unknown')
                     cert_expires = data.get('expirationDate', 'Unknown')
+                    icon = "✅" if cert_status.lower() == "signed" else "❌"
                     message = (
                         f"📜 **Certificate**: {cert_name}\n"
-                        f"**Status**: {cert_status}\n"
-                        f"**Expires**: {cert_expires}\n"
-                        f"(Note: Expiry date does not correlate to when it is revoked; it can be revoked by apple at **any** time.)"
+                        f"{icon}**Status**: {cert_status}\n"
+                        f"⏰ **Expires**: {cert_expires}\n"
+                        f"-# Note: Expiry date does not correlate to when it is revoked; it can be revoked by apple at **any** time."
                     )
                     await interaction.response.send_message(message)
                 else:
