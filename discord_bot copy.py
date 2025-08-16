@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 DISCORD_BOT_TOKEN = os.getenv('DISCORD_BOT_TOKEN')
+STATUS_NOTE = os.getenv('STATUS_NOTE', '')
 if not DISCORD_BOT_TOKEN:
     logger.error("DISCORD_BOT_TOKEN not found in .env file")
     exit(1)
@@ -66,6 +67,8 @@ async def status(interaction: discord.Interaction):
                         if status == 'signed' 
                         else "❌ Jailbreaks.app is not signed right now. This means you **can not** install apps"
                     )
+                    if STATUS_NOTE:
+                        message += f"\n\nNOTE: {STATUS_NOTE}"
                     await interaction.response.send_message(message, view=StatusView())
                 else:
                     await send_error_response(interaction, f"Failed to fetch status (HTTP {response.status})")
