@@ -108,9 +108,15 @@ async def certinfo(interaction: discord.Interaction):
             logger.error(f"Unexpected error: {e}")
             await send_error_response(interaction, f"Unexpected error: {e}")
 
+STATUS_CHANNEL_ID = os.getenv('STATUS_CHANNEL_ID')
+if STATUS_CHANNEL_ID:
+    STATUS_CHANNEL_ID = int(STATUS_CHANNEL_ID)
+
 @tasks.loop(seconds=60)
 async def check_jailbreak_status():
     global last_signed
+    if not STATUS_CHANNEL_ID:
+        return
     channel = client.get_channel(STATUS_CHANNEL_ID)
     if not channel:
         return
@@ -137,6 +143,7 @@ async def check_jailbreak_status():
                             color=discord.Color.green() if signed else discord.Color.red()
                         )
                         await channel.send(embed=embed, view=StatusView())
+
                 else:
                     logger.error(f"Failed to fetch status (HTTP {response.status})")
     except aiohttp.ClientError as e:
