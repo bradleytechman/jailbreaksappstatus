@@ -2,7 +2,7 @@
 
 a discord bot to check the status of [jailbreaks.app](https://jailbreaks.app) 
 
-The official instance to be added is at https://discord.com/oauth2/authorize?client_id=1369857399313268886&permissions=216064&integration_type=0&scope=bot+applications.commands
+The official instance to be added to servers is at https://discord.com/oauth2/authorize?client_id=1369857399313268886&permissions=216064&integration_type=0&scope=bot+applications.commands
 
 ## features
 
