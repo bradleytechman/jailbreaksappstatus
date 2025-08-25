@@ -21,3 +21,4 @@ The official instance to be added to servers is at https://discord.com/oauth2/au
 
 * this was made with chatgpt
 * optional role ping only works if `PING_ROLE_ID` is set
+* The old commits used to be there but I accidentally got rid of them
