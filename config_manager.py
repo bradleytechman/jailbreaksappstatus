@@ -35,3 +35,17 @@ class GuildConfigManager:
         if access_role_id is not None:
             self.data[gid]["access_role_id"] = access_role_id
         self._save()
+
+
+# add ConfigManager so status.py still works
+class ConfigManager:
+    @staticmethod
+    def load_config():
+        if not os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, "w") as f:
+                json.dump({}, f)
+        with open(CONFIG_FILE, "r") as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                return {}

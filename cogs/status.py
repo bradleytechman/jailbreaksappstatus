@@ -1,109 +1,125 @@
 import discord
 from discord.ext import commands, tasks
-from discord import app_commands, ButtonStyle
-from discord.ui import Button, View
 import aiohttp
-from config_manager import GuildConfigManager
+import json
+from discord import app_commands
+from config_manager import ConfigManager
 import os
 
+STATUS_URL = "https://api.jailbreaks.app/status"
+INFO_URL = "https://api.jailbreaks.app/info"
 STATUS_NOTE = os.getenv("STATUS_NOTE", "")
-
-class StatusView(View):
-    def __init__(self):
-        super().__init__(timeout=None)
-        self.add_item(Button(label="Website", style=ButtonStyle.link, url="https://jailbreaks.app"))
 
 class StatusCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.config_manager = GuildConfigManager()
-        self.last_signed = {}
+        self.last_status = None
         self.check_status.start()
 
-    @app_commands.command(name="status", description="Check jailbreaks.app status")
+    def cog_unload(self):
+        self.check_status.cancel()
+
+    @app_commands.command(name="status", description="Check Jailbreaks.app status")
     async def status(self, interaction: discord.Interaction):
         async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get("https://api.jailbreaks.app/status", timeout=10) as resp:
-                    data = await resp.json()
-                    signed = data.get("status","unknown").lower() == "signed"
-                    message = (
-                        "✅ Jailbreaks.app is signed right now. This means you can install apps"
-                        if signed else
-                        "❌ Jailbreaks.app is not signed right now. This means you can not install apps"
-                    )
-                    if STATUS_NOTE:
-                        message += f"\n\nNOTE: {STATUS_NOTE}"
+            async with session.get(STATUS_URL) as resp:
+                data = await resp.json()
 
-                    embed = discord.Embed(
-                        description=message,
-                        color=discord.Color.green() if signed else discord.Color.red()
-                    )
-                    await interaction.response.send_message(embed=embed, view=StatusView())
-            except Exception:
-                await interaction.response.send_message("Failed to fetch status", ephemeral=True)
+        signed = data.get("signed", False)
 
-    @app_commands.command(name="certinfo", description="Show jailbreaks.app certificate info")
+        if signed:
+            color = discord.Color.green()
+            message = "✅ Jailbreaks.app is signed right now! This means you can install apps."
+        else:
+            color = discord.Color.red()
+            message = "❌ Jailbreaks.app is not signed right now. This means you can not install apps"
+
+        embed = discord.Embed(description=message, color=color)
+        if STATUS_NOTE:
+            embed.add_field(name="Note", value=STATUS_NOTE, inline=False)
+
+        view = discord.ui.View()
+        view.add_item(discord.ui.Button(label="Website", url="https://jailbreaks.app"))
+
+        await interaction.response.send_message(embed=embed, view=view)
+
+    @app_commands.command(name="certinfo", description="Check Jailbreaks.app certificate info")
     async def certinfo(self, interaction: discord.Interaction):
         async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get("https://api.jailbreaks.app/info", timeout=10) as resp:
-                    data = await resp.json()
-                    cert_name = data.get("name","Unknown")
-                    status = data.get("status","Unknown")
-                    expires = data.get("expirationDate","Unknown")
-                    emoji = "✅" if status.lower() == "signed" else "❌"
+            async with session.get(INFO_URL) as resp:
+                data = await resp.json()
 
-                    text = (
-                        f"📜 Certificate: {cert_name}\n\n"
-                        f"{emoji} Status: {status}\n\n"
-                        f"⏰ Expiry date: {expires}\n\n"
-                        "-# Note: Expiry date does not correlate to when it is revoked; it can be revoked by Apple at any time."
-                    )
-                    embed = discord.Embed(description=text, color=discord.Color.blue())
-                    await interaction.response.send_message(embed=embed)
-            except Exception:
-                await interaction.response.send_message("Failed to fetch cert info", ephemeral=True)
+        cert_name = data.get("name", "Unknown")
+        status = data.get("status", "Unknown")
+        expires = data.get("expirationDate", "Unknown")
+
+        emoji = "✅" if status.lower() == "signed" else "❌"
+
+        embed = discord.Embed(color=discord.Color.blue())
+        embed.description = (
+            f"📜 Certificate: {cert_name}\n\n"
+            f"{emoji} Status: {status}\n\n"
+            f"⏰ Expiry date: {expires}\n\n"
+            f"-# Note: Expiry date does not correlate to when it is revoked; "
+            f"it can be revoked by Apple at any time."
+        )
+
+        await interaction.response.send_message(embed=embed)
 
     @tasks.loop(minutes=1)
     async def check_status(self):
         async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get("https://api.jailbreaks.app/status", timeout=10) as resp:
-                    data = await resp.json()
-                    signed = data.get("status","unknown").lower() == "signed"
-            except Exception:
-                return
+            async with session.get(STATUS_URL) as resp:
+                if resp.status != 200:
+                    return
+                data = await resp.json()
 
-        for guild in self.bot.guilds:
-            cfg = self.config_manager.get_guild_config(guild.id)
+        signed = data.get("signed", False)
+        new_status = "signed" if signed else "unsigned"
+
+        if self.last_status is None:
+            self.last_status = new_status
+            return
+
+        if new_status != self.last_status:
+            self.last_status = new_status
+            await self.announce_status_change(signed)
+
+    async def announce_status_change(self, signed: bool):
+        configs = ConfigManager.load_config()
+
+        for guild_id, cfg in configs.items():
+            guild = self.bot.get_guild(int(guild_id))
+            if not guild:
+                continue
+
             channel_id = cfg.get("channel_id")
             role_id = cfg.get("ping_role_id")
+
             if not channel_id:
                 continue
-            last = self.last_signed.get(guild.id)
-            if last is not None and last == signed:
-                continue
-            self.last_signed[guild.id] = signed
-            channel = guild.get_channel(channel_id)
-            if not channel:
-                continue
-            role = guild.get_role(role_id) if role_id else None
 
-            message = (
-                "✅ Jailbreaks.app is signed right now. This means you can install apps"
-                if signed else
-                "❌ Jailbreaks.app is not signed right now. This means you can not install apps"
-            )
-            if STATUS_NOTE:
-                message += f"\n\nNOTE: {STATUS_NOTE}"
+            channel = guild.get_channel(int(channel_id))
+            role = guild.get_role(int(role_id)) if role_id else None
 
-            embed = discord.Embed(
-                description=message,
-                color=discord.Color.green() if signed else discord.Color.red()
-            )
-            view = StatusView()
-            await channel.send(content=role.mention if role else None, embed=embed, view=view)
+            if signed:
+                color = discord.Color.green()
+                embed = discord.Embed(
+                    description="Jailbreaks.app is signed!",
+                    color=color
+                )
+            else:
+                color = discord.Color.red()
+                embed = discord.Embed(
+                    description="Jailbreaks.app is no longer signed.",
+                    color=color
+                )
+
+            view = discord.ui.View()
+            view.add_item(discord.ui.Button(label="Website", url="https://jailbreaks.app"))
+
+            content = role.mention if role else None
+            await channel.send(content=content, embed=embed, view=view)
 
 async def setup(bot):
     await bot.add_cog(StatusCog(bot))

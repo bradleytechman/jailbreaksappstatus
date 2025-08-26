@@ -1,92 +1,108 @@
 import discord
-from discord import app_commands
 from discord.ext import commands
-from config_manager import GuildConfigManager
+from discord import app_commands
+from config_manager import ConfigManager
+
+class ConfigModal(discord.ui.Modal, title="Configure Bot"):
+    def __init__(self, guild_id: int):
+        super().__init__()
+        self.guild_id = guild_id
+
+        # Load existing config for the guild
+        cfg = ConfigManager.load_config()
+        guild_cfg = cfg.get(str(guild_id), {})
+
+        # Initialize form fields with existing values as placeholders
+        self.channel_id = discord.ui.TextInput(
+            label="Channel ID",
+            required=True,
+            placeholder=guild_cfg.get("channel_id", "Enter Channel ID")
+        )
+        self.ping_role_id = discord.ui.TextInput(
+            label="Ping Role ID (optional)",
+            required=False,
+            placeholder=guild_cfg.get("ping_role_id", "Enter Ping Role ID") or ""
+        )
+        self.approved_role_id = discord.ui.TextInput(
+            label="Approved Role ID (optional)",
+            required=False,
+            placeholder=guild_cfg.get("approved_role_id", "Enter Approved Role ID") or ""
+        )
+
+        # Add inputs to the modal
+        self.add_item(self.channel_id)
+        self.add_item(self.ping_role_id)
+        self.add_item(self.approved_role_id)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        cfg = ConfigManager.load_config()
+        cfg[str(self.guild_id)] = {
+            "channel_id": self.channel_id.value,
+            "ping_role_id": self.ping_role_id.value or None,
+            "approved_role_id": self.approved_role_id.value or None
+        }
+        ConfigManager.save_config(cfg)
+        await interaction.response.send_message(embed=discord.Embed(
+            title="Configuration Saved",
+            description="Your settings have been updated.",
+            color=discord.Color.green()
+        ), ephemeral=True)
 
 class ConfigureCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.config_manager = GuildConfigManager()
 
-    @app_commands.command(name="configure", description="Configure bot status announcements")
+    @app_commands.command(name="configure", description="Adjust settings for status announcement messages")
     async def configure(self, interaction: discord.Interaction):
-        guild_id = interaction.guild.id
+        member = interaction.user
+        cfg = ConfigManager.load_config()
+        guild_cfg = cfg.get(str(interaction.guild_id), {})
 
-        cfg = self.config_manager.get_guild_config(guild_id)
-        approved_roles = cfg.get("approved_role_ids", [])
-        # check admin permission or approved role
-        has_perm = interaction.user.guild_permissions.administrator or any(
-            r.id in approved_roles for r in interaction.user.roles
+        approved_role_id = guild_cfg.get("approved_role_id")
+        has_permission = (
+            member.guild_permissions.administrator
+            or (approved_role_id and discord.utils.get(member.roles, id=int(approved_role_id)))
         )
-        if not has_perm:
-            embed = discord.Embed(
+        if not has_permission:
+            await interaction.response.send_message(embed=discord.Embed(
+                title="Permission Denied",
                 description="You do not have permission to do this.",
                 color=discord.Color.red()
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            ), ephemeral=True)
             return
 
-        embed = discord.Embed(title="Bot Configuration", color=discord.Color.green())
         view = discord.ui.View()
+        view.add_item(discord.ui.Button(label="Open Configuration Form", style=discord.ButtonStyle.primary, custom_id="open_config"))
+        view.add_item(discord.ui.Button(label="View Current Settings", style=discord.ButtonStyle.secondary, custom_id="view_config"))
 
-        async def view_settings(inter: discord.Interaction):
-            data = self.config_manager.get_guild_config(guild_id)
-            embed2 = discord.Embed(title="Current Configuration", color=discord.Color.blue())
-            embed2.add_field(name="Channel ID", value=str(data.get("channel_id", "Not set")), inline=False)
-            embed2.add_field(name="Ping Role ID", value=str(data.get("ping_role_id", "Not set")), inline=False)
-            embed2.add_field(name="Approved Role ID(s)", value=str(data.get("approved_role_ids", [])), inline=False)
-            await inter.response.send_message(embed=embed2, ephemeral=True)
+        await interaction.response.send_message(embed=discord.Embed(
+            title="Bot Configuration",
+            description="Adjust settings for status announcement messages. If it says 'Something went wrong. Try again later.' on the form, just press submit again and then cancel.",
+            color=discord.Color.blue()
+        ), view=view, ephemeral=True)
 
-        async def change_settings(inter: discord.Interaction):
-            modal = ConfigModal(self.config_manager, guild_id)
-            await inter.response.send_modal(modal)
+    @commands.Cog.listener()
+    async def on_interaction(self, interaction: discord.Interaction):
+        if interaction.type != discord.InteractionType.component:
+            return
 
-        view.add_item(discord.ui.Button(label="Change Settings", style=discord.ButtonStyle.green))
-        view.add_item(discord.ui.Button(label="View Settings", style=discord.ButtonStyle.blurple))
-        view.children[0].callback = change_settings
-        view.children[1].callback = view_settings
+        custom_id = interaction.data.get("custom_id")
+        guild_id = interaction.guild_id
 
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        if custom_id == "open_config":
+            modal = ConfigModal(guild_id)
+            await interaction.response.send_modal(modal)
 
-
-class ConfigModal(discord.ui.Modal, title="Configure Bot"):
-    def __init__(self, manager: GuildConfigManager, guild_id: int):
-        super().__init__()
-        self.manager = manager
-        self.guild_id = guild_id
-
-        cfg = manager.get_guild_config(guild_id)
-        self.channel_id_input = discord.ui.TextInput(
-            label="Channel ID", required=False, default=str(cfg.get("channel_id", ""))
-        )
-        self.ping_role_input = discord.ui.TextInput(
-            label="Role ID to ping", required=False, default=str(cfg.get("ping_role_id", ""))
-        )
-        self.approved_roles_input = discord.ui.TextInput(
-            label="Approved Role ID(s) (comma-separated)", required=False,
-            default=",".join(map(str, cfg.get("approved_role_ids", [])))
-        )
-
-        self.add_item(self.channel_id_input)
-        self.add_item(self.ping_role_input)
-        self.add_item(self.approved_roles_input)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        channel_id = int(self.channel_id_input.value) if self.channel_id_input.value else None
-        ping_role_id = int(self.ping_role_input.value) if self.ping_role_input.value else None
-        approved_roles = [int(r.strip()) for r in self.approved_roles_input.value.split(",") if r.strip()]
-
-        self.manager.set_guild_config(
-            self.guild_id,
-            channel_id=channel_id,
-            ping_role_id=ping_role_id,
-        )
-        cfg = self.manager.get_guild_config(self.guild_id)
-        cfg["approved_role_ids"] = approved_roles
-        self.manager.set_guild_config(self.guild_id, **cfg)
-
-        await interaction.response.send_message("✅ Configuration updated!", ephemeral=True)
-
+        elif custom_id == "view_config":
+            cfg = ConfigManager.load_config()
+            guild_cfg = cfg.get(str(guild_id), {})
+            description = "\n".join(f"**{k}**: {v}" for k, v in guild_cfg.items()) or "No settings configured."
+            embed = discord.Embed(
+                title="Current Settings",
+                description=description,
+                color=discord.Color.blue()
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(ConfigureCog(bot))
