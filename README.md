@@ -8,6 +8,7 @@ The official instance to be added to servers is at https://discord.com/oauth2/au
 
 * `/status` - shows current jailbreaks.app signing status
 * `/certinfo` - shows current certificate info
+* `/configure` - allows server admins/added users to post status updates when the status changes
 * can post a message in a channel and ping a role when signed/unsigned (checks once a minute)
 * can show a note in the `/status` message (eg: globally blacklisted but signed)
 
@@ -20,5 +21,4 @@ The official instance to be added to servers is at https://discord.com/oauth2/au
 5. run `curl -sSL https://raw.githubusercontent.com/bradleytechman/jailbreaksappstatus/refs/heads/main/setup.sh | bash`
 
 * this was made with chatgpt
-* optional role ping only works if `PING_ROLE_ID` is set
 * The old commits used to be there but I accidentally got rid of them
