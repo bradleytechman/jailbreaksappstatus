@@ -24,4 +24,4 @@ def set_guild_config(guild_id, channel_id=None, role_id=None):
         data[gid]["channel_id"] = channel_id
     if role_id is not None:
         data[gid]["role_id"] = role_id
-    save_config(data)
+    save_config(data)%
