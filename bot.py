@@ -4,9 +4,11 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 import traceback
+import aiohttp
 
 load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # Optional webhook URL from .env
 
 class JBAppBot(commands.Bot):
     async def setup_hook(self):
@@ -15,17 +17,20 @@ class JBAppBot(commands.Bot):
         await self.tree.sync()
 
     async def on_error(self, event, *args, **kwargs):
-        channel = self.get_channel(1408902153573236806)
-        if channel:
-            context = args[0] if args else None
-            error_info = "unknown action"
-            if isinstance(context, discord.Interaction):
-                if context.command:
-                    error_info = f"command /{context.command.name}"
-                elif context.data.get("custom_id"):
-                    error_info = f"interaction with {context.data.get('custom_id')}"
-            error_message = f"<@728610526891868201> Error in {error_info}: {''.join(traceback.format_exception_only(*sys.exc_info()[:2]))}"
-            await channel.send(error_message)
+        error_info = "unknown action"
+        context = args[0] if args else None
+        if isinstance(context, discord.Interaction):
+            if context.command:
+                error_info = f"command /{context.command.name}"
+            elif context.data.get("custom_id"):
+                error_info = f"interaction with {context.data.get('custom_id')}"
+        error_message = f"Error in {error_info}: {''.join(traceback.format_exception_only(*sys.exc_info()[:2]))}"
+
+        # Send to webhook if configured
+        if WEBHOOK_URL:
+            async with aiohttp.ClientSession() as session:
+                webhook = discord.Webhook.from_url(WEBHOOK_URL, session=session)
+                await webhook.send(error_message)
 
 intents = discord.Intents.default()
 intents.message_content = True
