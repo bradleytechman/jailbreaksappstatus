@@ -3,7 +3,7 @@ from discord.ext import commands, tasks
 import aiohttp
 import json
 from discord import app_commands
-from config_manager import ConfigManager
+from .config_manager import ConfigManager
 import os
 
 STATUS_URL = "https://api.jailbreaks.app/status"

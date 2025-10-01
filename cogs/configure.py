@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from config_manager import ConfigManager
+from .config_manager import ConfigManager
 
 class ConfigModal(discord.ui.Modal, title="Configure Bot"):
     def __init__(self, guild_id: int):
