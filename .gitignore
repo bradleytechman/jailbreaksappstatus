@@ -6,5 +6,6 @@ __pycache__/
 .vscode/
 .idea/
 *.log
+config.json
 guild_config.json
 nohup.out
