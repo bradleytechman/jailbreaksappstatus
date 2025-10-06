@@ -25,7 +25,8 @@ class StatusCog(commands.Cog):
             async with session.get(STATUS_URL) as resp:
                 data = await resp.json()
 
-        signed = data.get("signed", False)
+        status_val = data.get("status", "")
+        signed = status_val == "Signed"
 
         if signed:
             color = discord.Color.green()
@@ -53,7 +54,7 @@ class StatusCog(commands.Cog):
         status = data.get("status", "Unknown")
         expires = data.get("expirationDate", "Unknown")
 
-        emoji = "✅" if status.lower() == "signed" else "❌"
+        emoji = "✅" if status == "Signed" else "❌"
 
         embed = discord.Embed(color=discord.Color.blue())
         embed.description = (
@@ -63,18 +64,23 @@ class StatusCog(commands.Cog):
             f"-# Note: Expiry date does not correlate to when it is revoked; "
             f"it can be revoked by Apple at any time."
         )
+        if STATUS_NOTE:
+            embed.add_field(name="Note", value=STATUS_NOTE, inline=False)
 
         await interaction.response.send_message(embed=embed)
 
     @tasks.loop(minutes=1)
     async def check_status(self):
+        await self.bot.wait_until_ready()
+
         async with aiohttp.ClientSession() as session:
             async with session.get(STATUS_URL) as resp:
                 if resp.status != 200:
                     return
                 data = await resp.json()
 
-        signed = data.get("signed", False)
+        status_val = data.get("status", "")
+        signed = status_val == "Signed"
         new_status = "signed" if signed else "unsigned"
 
         if self.last_status is None:
@@ -83,7 +89,10 @@ class StatusCog(commands.Cog):
 
         if new_status != self.last_status:
             self.last_status = new_status
-            await self.announce_status_change(signed)
+            try:
+                await self.announce_status_change(signed)
+            except Exception:
+                pass
 
     async def announce_status_change(self, signed: bool):
         configs = ConfigManager.load_config()
