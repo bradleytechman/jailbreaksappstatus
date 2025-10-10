@@ -20,7 +20,8 @@ class StatusCog(commands.Cog):
         self.check_status.cancel()
 
     @app_commands.command(name="status", description="Check Jailbreaks.app status")
-    async def status(self, interaction: discord.Interaction):
+    @app_commands.describe(ephemeral="Optional: Make the bot's reply only be visible to you (Default if not set is false)")
+    async def status(self, interaction: discord.Interaction, ephemeral: bool = False):
         async with aiohttp.ClientSession() as session:
             async with session.get(STATUS_URL) as resp:
                 data = await resp.json()
@@ -42,10 +43,11 @@ class StatusCog(commands.Cog):
         view = discord.ui.View()
         view.add_item(discord.ui.Button(label="Website", url="https://jailbreaks.app"))
 
-        await interaction.response.send_message(embed=embed, view=view)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=ephemeral)
 
     @app_commands.command(name="certinfo", description="Check Jailbreaks.app certificate info")
-    async def certinfo(self, interaction: discord.Interaction):
+    @app_commands.describe(ephemeral="Optional: Make the bot's reply only be visible to you (Default if not set is false)")
+    async def certinfo(self, interaction: discord.Interaction, ephemeral: bool = False):
         async with aiohttp.ClientSession() as session:
             async with session.get(INFO_URL) as resp:
                 data = await resp.json()
@@ -68,7 +70,7 @@ class StatusCog(commands.Cog):
         if STATUS_NOTE:
             embed.add_field(name="Note", value=STATUS_NOTE, inline=False)
 
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
 
     @tasks.loop(minutes=1)
     async def check_status(self):
