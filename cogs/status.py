@@ -37,7 +37,7 @@ class StatusCog(commands.Cog):
 
         embed = discord.Embed(description=message, color=color)
         if STATUS_NOTE:
-            embed.add_field(name="Note", value=STATUS_NOTE, inline=False)
+            embed.add_field(name="Note:", value=STATUS_NOTE, inline=False)
 
         view = discord.ui.View()
         view.add_item(discord.ui.Button(label="Website", url="https://jailbreaks.app"))
@@ -53,6 +53,7 @@ class StatusCog(commands.Cog):
         cert_name = data.get("name", "Unknown")
         status = data.get("status", "Unknown")
         expires = data.get("expirationDate", "Unknown")
+        revoked = data.get("revocationDate", "Unknown")
 
         emoji = "✅" if status == "Signed" else "❌"
 
@@ -61,8 +62,8 @@ class StatusCog(commands.Cog):
             f"📜 Certificate: {cert_name}\n\n"
             f"{emoji} Status: {status}\n\n"
             f"⏰ Expiry date: {expires}\n\n"
-            f"-# Note: Expiry date does not correlate to when it is revoked; "
-            f"it can be revoked by Apple at any time."
+            f"⏳ Revocation date: {revoked}\n\n"
+            f"-# Keep in mind that expiry date does not correlate to when it is revoked, and Revocation date is for when it was previously revoked, not a date in the future."
         )
         if STATUS_NOTE:
             embed.add_field(name="Note", value=STATUS_NOTE, inline=False)
