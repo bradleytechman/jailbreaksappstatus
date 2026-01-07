@@ -1,10 +1,10 @@
 import discord
-from discord.ext import commands, tasks
-import aiohttp
-import json
-from discord import app_commands
-from .config_manager import ConfigManager
 import os
+import aiohttp
+from .config_manager import ConfigManager
+from discord.ext import commands, tasks
+from discord import app_commands
+from textwrap import dedent
 
 STATUS_URL = "https://api.jailbreaks.app/status"
 INFO_URL = "https://api.jailbreaks.app/info"
@@ -37,6 +37,7 @@ class StatusCog(commands.Cog):
             message = "❌ Jailbreaks.app is not signed right now. This means you can not install apps"
 
         embed = discord.Embed(description=message, color=color)
+
         if STATUS_NOTE:
             embed.add_field(name="Note:", value=STATUS_NOTE, inline=False)
 
@@ -52,21 +53,23 @@ class StatusCog(commands.Cog):
             async with session.get(INFO_URL) as resp:
                 data = await resp.json()
 
-        cert_name = data.get("name", "Unknown")
         status = data.get("status", "Unknown")
-        expires = data.get("expirationDate", "Unknown")
-        revoked = data.get("revocationDate", "Unknown")
+        revocation_date = data.get("revocationDate")
 
-        emoji = "✅" if status == "Signed" else "❌"
+        description_str = dedent(f"""
+        📜 Certificate: {data.get("name", "Unknown")}
 
-        embed = discord.Embed(color=discord.Color.blue())
-        embed.description = (
-            f"📜 Certificate: {cert_name}\n\n"
-            f"{emoji} Status: {status}\n\n"
-            f"⏰ Expiry date: {expires}\n\n"
-            f"⏳ Revocation date: {revoked}\n\n"
-            f"-# Keep in mind that expiry date does not correlate to when it is revoked, and Revocation date is for when it was previously revoked, not a date in the future."
-        )
+        {"✅" if status == "Signed" else "❌"} Status: {status}
+
+        ⏰ Expiry date: {data.get("expirationDate", "Unknown")}
+
+        {f"⏳ Revocation date: {revocation_date}" if revocation_date is not None else ""}
+
+        -# Keep in mind that expiry date does not correlate to when it is revoked, and Revocation date is for when it was previously revoked, not a date in the future.
+        """).strip().replace("\n\n\n", "\n") # remove extra newlines if no revocation date
+
+        embed = discord.Embed(description=description_str, color=discord.Color.blue())
+
         if STATUS_NOTE:
             embed.add_field(name="Note", value=STATUS_NOTE, inline=False)
 
