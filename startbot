@@ -1,0 +1,20 @@
+#!/bin/bash
+
+cd ~/Documents/jailbreaksappstatus || exit 1
+
+# kill all running bot.py instances
+pids=$(pgrep -f "python3 bot.py")
+if [ -n "$pids" ]; then
+    echo "terminating existing bot.py processes: $pids"
+    kill -9 $pids
+fi
+
+# activate venv
+source venv/bin/activate
+
+# clean old nohup output
+rm -f nohup.out
+
+# restart bot
+nohup python3 bot.py &
+echo "bot.py restarted with nohup"

@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+.env
+.DS_Store
+.vscode/
+.idea/
+*.log
+config.json
+guild_config.json
+nohup.out
+.git
+startbot
