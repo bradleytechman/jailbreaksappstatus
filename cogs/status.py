@@ -6,6 +6,7 @@ from .config_manager import ConfigManager
 import os
 from email.utils import parsedate_to_datetime
 from textwrap import dedent
+import traceback
 
 STATUS_URL = "https://api.jailbreaks.app/status"
 INFO_URL = "https://api.jailbreaks.app/info"
@@ -61,6 +62,7 @@ class StatusCog(commands.Cog):
             view.add_item(discord.ui.Button(label="Website", url="https://jailbreaks.app"))
             await interaction.followup.send(embed=embed, view=view)
         except Exception:
+            traceback.print_exc()
             await self.send_error(interaction, "Sorry, something went wrong while fetching the status.")
 
     @app_commands.command(name="certinfo", description="Check Jailbreaks.app certificate info")
@@ -94,6 +96,7 @@ class StatusCog(commands.Cog):
 
             await interaction.followup.send(embed=embed)
         except Exception:
+            traceback.print_exc()
             await self.send_error(interaction, "Sorry, something went wrong while fetching the certificate info.")
 
     async def update_presence(self, signed: bool):
@@ -137,7 +140,7 @@ class StatusCog(commands.Cog):
                 await self.announce_status_change(signed)
                 await self.update_presence(signed)
         except Exception:
-            pass
+            traceback.print_exc()
 
     async def announce_status_change(self, signed: bool):
         configs = ConfigManager.load_config()
@@ -176,7 +179,7 @@ class StatusCog(commands.Cog):
             try:
                 await channel.send(content=content, embed=embed, view=view)
             except Exception:
-                pass
+                traceback.print_exc()
 
     @check_status.before_loop
     async def before_check_status(self):
