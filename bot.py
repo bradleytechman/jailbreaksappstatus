@@ -73,6 +73,7 @@ class JBAppBot(commands.Bot):
         # Load Cogs
         await self.load_extension("cogs.status")
         await self.load_extension("cogs.configure")
+        await self.load_extension("cogs.app")
 
         # Sync commands to Discord
         await self.tree.sync()
