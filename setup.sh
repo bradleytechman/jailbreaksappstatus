@@ -38,10 +38,12 @@ pip install -r requirements.txt
 echo "setting up .env file..."
 read -p "Enter DISCORD_TOKEN: " token
 read -p "Enter default STATUS_NOTE (optional, press enter to skip): " note
+read -p "Enter webhook URL for logging (optional, press enter to skip):" webhook
 
 cat > .env <<EOL
 DISCORD_TOKEN=$token
 STATUS_NOTE=$note
+WEBHOOK_URL="$webhook"
 EOL
 
 echo "setup complete!"
