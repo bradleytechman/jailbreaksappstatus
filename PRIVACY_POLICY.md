@@ -3,8 +3,7 @@
 **Effective Date:** March 1, 2026
 
 1. **Data Collected**  
-- Discord guild (server) ID, channel ID, role ID (for configuration and auto-post features)  
-- Usage of slash commands (e.g., which commands were run, when)  
+- Discord guild (server) ID, channel ID, role ID('s) (for auto-post features when setup to)    
 No message content, user personal information, or sensitive data is stored beyond what is strictly required for operation.
 
 2. **No Message Content Logging**  
