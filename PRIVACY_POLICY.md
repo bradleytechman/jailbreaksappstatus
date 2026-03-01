@@ -20,7 +20,7 @@ Data is not sold, shared, or transferred to third parties except when required b
 Reasonable technical measures are used to protect stored data. No liability is accepted for unauthorized access or breaches.
 
 6. **Data Deletion**  
-Use the reset button/component in /configuration to delete all your server's stored data (configs removed immediately). For additional requests or issues, contact @bradleytechman.
+Use the reset button in /configure to delete all your server's stored data (configs removed immediately). For additional requests or issues, contact @bradleytechman.
 
 7. **Changes to Policy**  
 This policy may be updated. Continued use constitutes acceptance.
