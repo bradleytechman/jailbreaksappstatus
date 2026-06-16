@@ -36,7 +36,8 @@ def md_escape(s: Any) -> str:
 def html_to_text(s: str) -> str:
     if not s:
         return ""
-    s = s.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
+    # remove <br> entirely instead of turning into \n (gifhr)
+    s = re.sub(r"<br\s*/?>", "", s, flags=re.IGNORECASE)
     s = re.sub(r"<[^>]+>", "", s)
     return s.strip()
 
