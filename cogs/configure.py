@@ -10,9 +10,9 @@ class ConfigModal(discord.ui.Modal, title="Configure Bot"):
         super().__init__()
         self.guild_id = guild_id
         cfg = ConfigManager.load_config().get(str(guild_id), {})
-        self.channel_id = discord.ui.TextInput(label="Channel ID for notifications", required=False, placeholder=cfg.get("channel_id", "Enter Channel ID"))
-        self.ping_role_id = discord.ui.TextInput(label="Ping Role ID (optional)", required=False, placeholder=cfg.get("ping_role_id", "Enter Role ID to ping"))
-        self.approved_role_id = discord.ui.TextInput(label="Approved Role ID (optional)", required=False, placeholder=cfg.get("approved_role_id", "Role that can use /configure"))
+        self.channel_id = discord.ui.TextInput(label="Channel ID for notifications", required=False, default=cfg.get("channel_id", ""))
+        self.ping_role_id = discord.ui.TextInput(label="Ping Role ID (optional)", required=False, default=cfg.get("ping_role_id", ""))
+        self.approved_role_id = discord.ui.TextInput(label="Approved Role ID (optional)", required=False, default=cfg.get("approved_role_id", ""))
         self.add_item(self.channel_id)
         self.add_item(self.ping_role_id)
         self.add_item(self.approved_role_id)
