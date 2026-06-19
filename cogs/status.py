@@ -7,6 +7,7 @@ import os
 from email.utils import parsedate_to_datetime
 from textwrap import dedent
 import traceback
+from datetime import datetime
 
 STATUS_URL = "https://api.jailbreaks.app/status"
 INFO_URL = "https://api.jailbreaks.app/info"
@@ -50,7 +51,7 @@ class StatusCog(commands.Cog):
             message = (
                 "✅ Jailbreaks.app is signed right now! This means you can install apps."
                 if signed
-                else "❌ Jailbreaks.app is not signed right now. This means you cannot install apps."
+                else "❌ Jailbreaks.app is not signed right now. This means you cannot install apps currently. There is no ETA for when it will be signed."
             )
 
             embed = discord.Embed(description=message, color=color)
@@ -63,7 +64,7 @@ class StatusCog(commands.Cog):
             await interaction.followup.send(embed=embed, view=view)
         except Exception:
             traceback.print_exc()
-            await self.send_error(interaction, "Sorry, something went wrong while fetching the status.")
+            await self.send_error(interaction, "Sorry, something went wrong while fetching the status. Please try again later.")
 
     @app_commands.command(name="certinfo", description="Check Jailbreaks.app certificate info")
     @app_commands.describe(ephemeral="Optional: Make the bot's reply only be visible to you (Default is false)")
@@ -147,20 +148,25 @@ class StatusCog(commands.Cog):
         for guild_id, cfg in configs.items():
             if not cfg.get("channel_id"):
                 continue
+
             try:
                 gid_int = int(guild_id)
             except ValueError:
                 continue
+
             guild = self.bot.get_guild(gid_int)
             if not guild:
                 continue
+
             try:
                 channel_id = int(cfg["channel_id"])
             except (KeyError, ValueError):
                 continue
+
             channel = guild.get_channel(channel_id)
             if not channel:
                 continue
+
             role = None
             if cfg.get("ping_role_id"):
                 try:
@@ -169,18 +175,49 @@ class StatusCog(commands.Cog):
                     pass
 
             color = discord.Color.green() if signed else discord.Color.red()
-            desc = "Jailbreaks.app is now signed!" if signed else "Jailbreaks.app is no longer signed."
-            embed = discord.Embed(description=desc, color=color)
 
-            view = discord.ui.View()
-            view.add_item(discord.ui.Button(label="Website", url="https://jailbreaks.app"))
+            title = (
+                "Jailbreaks.app is currently signed!"
+                if signed
+                else "Jailbreaks.app is no longer signed."
+            )
+
+            description = (
+                "Apps are signed and can be downloaded now. Hooray!\n\n"
+                if signed
+                else "The apps have been revoked by Apple and cannot currently be installed.\n"
+                     "**We do not know when they will be available again.**"
+            )
+
+            embed = discord.Embed(
+                title=title,
+                description=description,
+                color=color
+            )
+
+            embed.add_field(
+                name="**Download:**",
+                value="**[https://jailbreaks.app/](https://jailbreaks.app/)**",
+                inline=True
+            )
+
+            embed.add_field(
+                name="**Download (Legacy)**",
+                value="**[https://jailbreaks.app/legacy.html](https://jailbreaks.app/legacy.html)**",
+                inline=True
+            )
+
+            embed.set_footer(
+                text=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            )
 
             content = role.mention if role else None
+
             try:
-                await channel.send(content=content, embed=embed, view=view)
+                await channel.send(content=content, embed=embed)
             except Exception:
                 traceback.print_exc()
-
+                
     @check_status.before_loop
     async def before_check_status(self):
         await self.bot.wait_until_ready()
