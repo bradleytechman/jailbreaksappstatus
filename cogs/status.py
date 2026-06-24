@@ -46,7 +46,17 @@ class StatusCog(commands.Cog):
                     data = await resp.json()
 
             status_val = data.get("status", "")
-            signed = status_val.lower() == "signed"
+            if status_val == "Signed":
+                signed = True
+            elif status_val == "Revoked":
+                signed = False
+            else:
+                await self.send_error(
+                    interaction,
+                    "Sorry, something went wrong while fetching the status. Please try again later."
+                )
+                return
+
             color = discord.Color.green() if signed else discord.Color.red()
             message = (
                 "✅ Jailbreaks.app is signed right now! This means you can install apps."
@@ -128,16 +138,23 @@ class StatusCog(commands.Cog):
                     data = await resp.json()
 
             status_val = data.get("status", "")
-            new_status = "signed" if status_val.lower() == "signed" else "unsigned"
+
+            if status_val == "Signed":
+                new_status = "signed"
+                signed = True
+            elif status_val == "Revoked":
+                new_status = "revoked"
+                signed = False
+            else:
+                return
 
             if self.last_status is None:
                 self.last_status = new_status
-                await self.update_presence(new_status == "signed")
+                await self.update_presence(signed)
                 return
 
             if new_status != self.last_status:
                 self.last_status = new_status
-                signed = new_status == "signed"
                 await self.announce_status_change(signed)
                 await self.update_presence(signed)
         except Exception:
@@ -196,14 +213,14 @@ class StatusCog(commands.Cog):
             )
 
             embed.add_field(
-                name="**Download:**",
-                value="**[https://jailbreaks.app/](https://jailbreaks.app/)**",
+                name="Download:",
+                value="[Link](https://jailbreaks.app/)",
                 inline=True
             )
 
             embed.add_field(
-                name="**Download (Legacy)**",
-                value="**[https://jailbreaks.app/legacy.html](https://jailbreaks.app/legacy.html)**",
+                name="Download (Legacy)",
+                value="[Link](https://jailbreaks.app/legacy.html)",
                 inline=True
             )
 
@@ -217,7 +234,7 @@ class StatusCog(commands.Cog):
                 await channel.send(content=content, embed=embed)
             except Exception:
                 traceback.print_exc()
-                
+
     @check_status.before_loop
     async def before_check_status(self):
         await self.bot.wait_until_ready()
