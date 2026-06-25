@@ -212,18 +212,18 @@ class StatusCog(commands.Cog):
                 color=color
             )
             
-		if signed:
-            embed.add_field(
-                name="Download:",
-                value="[Link](https://jailbreaks.app/)",
-                inline=True
-            )
+            if signed:
+                embed.add_field(
+                    name="Download:",
+                    value="[Link](https://jailbreaks.app/)",
+                    inline=True
+                )
 
-            embed.add_field(
-                name="Download (Legacy)",
-                value="[Link](https://jailbreaks.app/legacy.html)",
-                inline=True
-            )
+                embed.add_field(
+                    name="Download (Legacy)",
+                    value="[Link](https://jailbreaks.app/legacy.html)",
+                    inline=True
+                )
 
             embed.set_footer(
                 text=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
