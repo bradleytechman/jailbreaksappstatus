@@ -211,7 +211,8 @@ class StatusCog(commands.Cog):
                 description=description,
                 color=color
             )
-
+            
+		if signed:
             embed.add_field(
                 name="Download:",
                 value="[Link](https://jailbreaks.app/)",

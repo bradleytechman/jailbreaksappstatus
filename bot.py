@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 import traceback
 import aiohttp
 import asyncio
+import time
+from discord import app_commands
 
 # Load environment variables early
 load_dotenv()
@@ -52,6 +54,7 @@ class JBAppBot(commands.Bot):
         self.log_session: aiohttp.ClientSession | None = None
         self.log_webhook: discord.Webhook | None = None
         self.log_task: asyncio.Task | None = None
+        self._cmd_rate: dict[tuple[int, str], list[float]] = {}
 
     async def setup_hook(self):
         # Initialize log queue in the running loop
@@ -74,6 +77,47 @@ class JBAppBot(commands.Bot):
         await self.load_extension("cogs.status")
         await self.load_extension("cogs.configure")
         await self.load_extension("cogs.app")
+
+        WINDOW_SECONDS = 10.0
+        MAX_USES = 4
+
+        @self.tree.check
+        async def anti_spam(interaction: discord.Interaction) -> bool:
+            if not interaction.user or not interaction.command:
+                return True
+
+            now = time.monotonic()
+            cmd_name = interaction.command.qualified_name
+            key = (interaction.user.id, cmd_name)
+
+            ts = self._cmd_rate.get(key, [])
+            cutoff = now - WINDOW_SECONDS
+            ts = [t for t in ts if t >= cutoff]
+
+            if len(ts) >= MAX_USES:
+                retry_after = (ts[0] + WINDOW_SECONDS) - now
+                interaction.extras["retry_after"] = max(0.0, retry_after)
+                raise app_commands.CheckFailure("rate_limited")
+
+            ts.append(now)
+            self._cmd_rate[key] = ts
+            return True
+
+        @self.tree.error
+        async def on_tree_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+            if isinstance(error, app_commands.CheckFailure) and str(error) == "rate_limited":
+                retry_after = float(interaction.extras.get("retry_after", 0.0))
+                msg = f"Slow down—try again in {retry_after:.1f}s."
+                try:
+                    if interaction.response.is_done():
+                        await interaction.followup.send(msg, ephemeral=True)
+                    else:
+                        await interaction.response.send_message(msg, ephemeral=True)
+                except Exception:
+                    pass
+                return
+
+            raise error
 
         # Sync commands to Discord
         await self.tree.sync()
@@ -160,9 +204,4 @@ if WEBHOOK_URL:
         sys.stderr = WebhookStream(sys.stderr)
     except Exception:
         # If anything goes wrong setting up the webhook capture, fallback to original streams
-        traceback.print_exc()
-
-if DISCORD_TOKEN:
-    bot.run(DISCORD_TOKEN)
-else:
-    print("FATAL: DISCORD_TOKEN not found in .env file. Bot cannot start.", file=sys.stderr)
+        pass

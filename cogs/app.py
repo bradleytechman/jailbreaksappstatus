@@ -8,6 +8,9 @@ import aiohttp
 import discord
 from discord import app_commands
 from discord.ext import commands
+# the following two are just for the "BOT_INFO" thing in /app, the reason I put it in here is because it's not needed to add ANOTHER command for it.
+import asyncio
+import subprocess
 
 API_BASE = os.getenv("JB_API_BASE_URL", "https://api.jailbreaks.app")
 API_ALL = f"{API_BASE}/appinfo/all"
@@ -299,6 +302,38 @@ class AppCog(commands.Cog):
                 style=discord.ButtonStyle.link
             ))
             await interaction.followup.send(embed=embed, view=view, ephemeral=ephemeral)
+            return
+        if name.strip().upper() == "INFO":
+            # ping to google.com
+            try:
+                proc = await asyncio.create_subprocess_exec(
+                    "ping", "-c", "1", "google.com",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                stdout, _ = await proc.communicate()
+                match = re.search(r"time=([\d.]+)", stdout.decode())
+                ping = f"{match.group(1)} ms" if match else "Unknown"
+            except Exception:
+                ping = "Unknown"
+
+            # get current git commit
+            try:
+                commit = subprocess.check_output(
+                    ["git", "rev-parse", "--short", "HEAD"],
+                    text=True
+                ).strip()
+            except Exception:
+                commit = "Unknown"
+
+            embed = discord.Embed(
+                title="jailbreaks.app",
+                color=0x5865F2
+            )
+            embed.add_field(name="Ping", value=ping, inline=False)
+            embed.add_field(name="Commit", value=commit, inline=False)
+
+            await interaction.followup.send(embed=embed, ephemeral=ephemeral)
             return
 
         api_app = find_app(api_apps, name)
