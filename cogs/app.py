@@ -345,7 +345,7 @@ class AppCog(commands.Cog):
                        
             embed.add_field(name="Ping", value=ping, inline=False)
             embed.add_field(name="Commit", value=commit, inline=False)
-            embed.add_field(name="Uptime", valueuptime, inline=False)
+            embed.add_field(name="Uptime", value=uptime, inline=False)
 
             await interaction.followup.send(embed=embed, ephemeral=ephemeral)
             return
