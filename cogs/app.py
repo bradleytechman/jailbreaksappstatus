@@ -340,7 +340,7 @@ class AppCog(commands.Cog):
                 stdout, _ = await proc.communicate()
                 match = re.search(r"up\s+([\d:]+)", stdout.decode())
                 uptime = match.group(1) if match else "Unknown"
-           except Exception:
+            except Exception:
                uptime = "Unknown"
                        
             embed.add_field(name="Ping", value=ping, inline=False)
