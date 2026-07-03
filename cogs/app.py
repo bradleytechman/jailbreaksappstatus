@@ -338,7 +338,7 @@ class AppCog(commands.Cog):
                     stderr=asyncio.subprocess.PIPE,
                 )
                 stdout, _ = await proc.communicate()
-                match = re.search(r"up\s+([\d:]+)", stdout.decode())
+                match = re.search(r"up\s+(.+?),\s+\d+ user", stdout.decode())
                 uptime = match.group(1) if match else "Unknown"
             except Exception:
                uptime = "Unknown"
