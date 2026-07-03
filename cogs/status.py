@@ -37,8 +37,8 @@ class StatusCog(commands.Cog):
         await interaction.followup.send(embed=embed, ephemeral=True)
 
     @app_commands.command(name="status", description="Check Jailbreaks.app status")
-    @app_commands.describe(ephemeral="Optional: Make the bot's reply only be visible to you (Default is false)")
-    async def status(self, interaction: discord.Interaction, ephemeral: bool = False):
+    @app_commands.describe(ephemeral="Optional: Make the bot's reply only be visible to you (Default is true)")
+    async def status(self, interaction: discord.Interaction, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
             async with aiohttp.ClientSession() as session:
@@ -77,8 +77,8 @@ class StatusCog(commands.Cog):
             await self.send_error(interaction, "Sorry, something went wrong while fetching the status. Please try again later.")
 
     @app_commands.command(name="certinfo", description="Check Jailbreaks.app certificate info")
-    @app_commands.describe(ephemeral="Optional: Make the bot's reply only be visible to you (Default is false)")
-    async def certinfo(self, interaction: discord.Interaction, ephemeral: bool = False):
+    @app_commands.describe(ephemeral="Optional: Make the bot's reply only be visible to you (Default is true)")
+    async def certinfo(self, interaction: discord.Interaction, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
             async with aiohttp.ClientSession() as session:

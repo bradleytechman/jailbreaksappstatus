@@ -283,7 +283,7 @@ class AppCog(commands.Cog):
         try:
             api_apps = await self._get_api_cached()
         except Exception:
-            return await interaction.followup.send("Failed to fetch app list from the API.", ephemeral=ephemeral)
+            return await interaction.followup.send("Failed to fetch app list from the API. Please try again later.", ephemeral=ephemeral)
 
         if name.strip().lower() == "rune":
             embed = discord.Embed(
@@ -330,8 +330,22 @@ class AppCog(commands.Cog):
                 title="jailbreaks.app",
                 color=0x5865F2
             )
+            # get uptime
+            try:
+                proc = await asyncio.create_subprocess_exec(
+                    "uptime", 
+                    stdout=asyncio.subprocess.PIPE, 
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                stdout, _ = await proc.communicate()
+                match = re.search(r"up\s+([\d:]+)", stdout.decode())
+                uptime = match.group(1) if match else "Unknown"
+           except Exception:
+               uptime = "Unknown"
+                       
             embed.add_field(name="Ping", value=ping, inline=False)
             embed.add_field(name="Commit", value=commit, inline=False)
+            embed.add_field(name="Uptime", valueuptime, inline=False)
 
             await interaction.followup.send(embed=embed, ephemeral=ephemeral)
             return
