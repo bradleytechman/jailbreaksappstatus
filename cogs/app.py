@@ -8,6 +8,7 @@ import aiohttp
 import discord
 from discord import app_commands
 from discord.ext import commands
+from urllib.parse import quote 
 # the following two are just for the "BOT_INFO" thing in /app, the reason I put it in here is because it's not needed to add ANOTHER command for it.
 import asyncio
 import subprocess
@@ -75,7 +76,8 @@ async def fetch_json_with_retry(session: aiohttp.ClientSession, url: str) -> Any
     raise last_exc
 
 async def fetch_downloads(session: aiohttp.ClientSession, app_name: str) -> Optional[int]:
-    url = f"{API_STATS}/{slugify(app_name)}"
+    name = (app_name or "").strip()
+    url = f"{API_STATS}/{quote(name)}"
     async with session.get(url) as resp:
         if resp.status != 200:
             return None
