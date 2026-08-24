@@ -142,7 +142,6 @@ def no_prefix_callable(bot, message):
     return []
 
 intents = discord.Intents.default()
-intents.message_content = True
 
 bot = JBAppBot(command_prefix=no_prefix_callable, intents=intents)
 
