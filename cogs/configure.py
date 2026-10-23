@@ -11,8 +11,8 @@ class ConfigModal(discord.ui.Modal, title="Configure Bot"):
         self.guild_id = guild_id
         cfg = ConfigManager.load_config().get(str(guild_id), {})
         self.channel_id = discord.ui.TextInput(label="Channel ID for notifications", required=False, default=cfg.get("channel_id", ""))
-        self.ping_role_id = discord.ui.TextInput(label="Ping Role ID (optional)", required=False, default=cfg.get("ping_role_id", ""))
-        self.approved_role_id = discord.ui.TextInput(label="Approved Role ID (optional)", required=False, default=cfg.get("approved_role_id", ""))
+        self.ping_role_id = discord.ui.TextInput(label="ID of role to ping for new announcements (optional)", required=False, default=cfg.get("ping_role_id", ""))
+        self.approved_role_id = discord.ui.TextInput(label="ID of role to use this command who is not an admin (optional)", required=False, default=cfg.get("approved_role_id", ""))
         self.add_item(self.channel_id)
         self.add_item(self.ping_role_id)
         self.add_item(self.approved_role_id)
@@ -49,7 +49,7 @@ class ResetConfirmModal(discord.ui.Modal, title="Confirm Reset"):
                 cfg = ConfigManager.load_config()
                 if cfg.pop(str(self.guild_id), None):
                     ConfigManager.save_config(cfg)
-                    await interaction.response.send_message("Settings for this server have been reset.", ephemeral=True)
+                    await interaction.response.send_message("Settings for this server have been reset!", ephemeral=True)
                 else:
                     await interaction.response.send_message("No settings were found to reset.", ephemeral=True)
             else:
@@ -65,15 +65,15 @@ class ConfigureCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @app_commands.command(name="configure", description="Adjust settings for status announcement messages")
+    @app_commands.command(name="configure", description="Adjust settings for automatic status announcement messages")
     async def configure(self, interaction: discord.Interaction):
         try:
             # First check whether this interaction came from a guild (server)
             if interaction.guild is None:
                 # User account / DM - cannot use this command
                 embed = discord.Embed(
-                    title="Cannot use command here",
-                    description="You cannot use this command on a user account (DM). This command must be used in a server.",
+                    title="Cannot use this command here",
+                    description="You cannot use this command on a user account (DM). This command must be used in a server that you have administrator in or an approved role.",
                     color=discord.Color.red()
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
