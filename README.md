@@ -10,7 +10,7 @@ The official instance to be added to servers is at https://discord.com/oauth2/au
 * `/certinfo` - shows current certificate info
 * `/configure` - allows server admins/added users to post status updates when the status changes
 * can post a message in a channel and ping a role when signed/unsigned (checks once a minute)
-* can show a note in the `/status` message (eg: globally blacklisted but signed)
+* GLOBALLY_BLACKLISTED in .env (true/false) controls a global blacklist warning shown in /status and /certinfo, and updates bot presence
 
 ## setup
 

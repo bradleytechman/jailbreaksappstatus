@@ -11,7 +11,7 @@ from datetime import datetime
 
 STATUS_URL = "https://api.jailbreaks.app/status"
 INFO_URL = "https://api.jailbreaks.app/info"
-STATUS_NOTE = os.getenv("STATUS_NOTE", "")
+GLOBALLY_BLACKLISTED = os.getenv("GLOBALLY_BLACKLISTED", "false").lower() in ("true", "1", "yes", "on")
 
 class StatusCog(commands.Cog):
     def __init__(self, bot):
@@ -57,17 +57,18 @@ class StatusCog(commands.Cog):
                 )
                 return
 
-            color = discord.Color.green() if signed else discord.Color.red()
-            message = (
-                "✅ Jailbreaks.app is signed right now! This means you can install apps."
-                if signed
-                else "❌ Jailbreaks.app is not signed right now. This means you cannot install apps currently. There is no ETA for when it will be signed."
-            )
+            if signed and GLOBALLY_BLACKLISTED:
+                color = discord.Color.orange()
+                message = "🚧 Jailbreaks.app is signed right now, but the certificate is globally blacklisted, meaning **you cannot install apps currently with this certificate.**"
+            else:
+                color = discord.Color.green() if signed else discord.Color.red()
+                message = (
+                    "✅ Jailbreaks.app is signed right now! This means you can install apps."
+                    if signed
+                    else "❌ Jailbreaks.app is not signed right now. This means you cannot install apps currently. There is no ETA for when it will be signed."
+                )
 
             embed = discord.Embed(description=message, color=color)
-
-            if STATUS_NOTE:
-                embed.add_field(name="Note:", value=STATUS_NOTE, inline=False)
 
             view = discord.ui.View()
             view.add_item(discord.ui.Button(label="Website", url="https://jailbreaks.app"))
@@ -100,10 +101,10 @@ class StatusCog(commands.Cog):
             -# Keep in mind that expiry date does not correlate to when it is revoked, and Revocation date is for when it was previously revoked, not a date in the future.
             """).strip().replace("\n\n\n", "\n")  # remove extra newlines if no revocation date
 
-            embed = discord.Embed(description=description_str, color=discord.Color.blue())
+            if GLOBALLY_BLACKLISTED:
+                description_str = "🚧 Jailbreaks.app is signed right now, but the certificate is globally blacklisted, meaning **you cannot install apps currently with this certificate.**\n\n" + description_str
 
-            if STATUS_NOTE:
-                embed.add_field(name="Note", value=STATUS_NOTE, inline=False)
+            embed = discord.Embed(description=description_str, color=discord.Color.orange() if GLOBALLY_BLACKLISTED else discord.Color.blue())
 
             await interaction.followup.send(embed=embed)
         except Exception:
@@ -111,8 +112,7 @@ class StatusCog(commands.Cog):
             await self.send_error(interaction, "Sorry, something went wrong while fetching the certificate info.")
 
     async def update_presence(self, signed: bool):
-        note_lower = STATUS_NOTE.lower()
-        if "global" in note_lower and "blacklist" in note_lower:
+        if GLOBALLY_BLACKLISTED:
             await self.bot.change_presence(
                 status=discord.Status.idle,
                 activity=discord.Activity(type=discord.ActivityType.watching, name="🚧 Globally Blacklisted")
