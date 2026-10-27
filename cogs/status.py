@@ -46,27 +46,21 @@ class StatusCog(commands.Cog):
                     data = await resp.json()
 
             status_val = data.get("status", "")
-            if status_val == "Signed":
-                signed = True
-            elif status_val == "Revoked":
-                signed = False
+            if status_val == "Revoked":
+                color = discord.Color.red()
+                message = "❌ Jailbreaks.app is revoked right now. This means you cannot install apps currently. There is no ETA for when it will be signed."
+            elif status_val == "Signed" and GLOBALLY_BLACKLISTED:
+                color = discord.Color.orange()
+                message = "🚧 Jailbreaks.app is signed right now, but the certificate is globally blacklisted, meaning **you cannot install apps currently with this certificate.**"
+            elif status_val == "Signed":
+                color = discord.Color.green()
+                message = "✅ Jailbreaks.app is signed right now! This means you can install apps."
             else:
                 await self.send_error(
                     interaction,
                     "Sorry, something went wrong while fetching the status. Please try again later."
                 )
                 return
-
-            if signed and GLOBALLY_BLACKLISTED:
-                color = discord.Color.orange()
-                message = "🚧 Jailbreaks.app is signed right now, but the certificate is globally blacklisted, meaning **you cannot install apps currently with this certificate.**"
-            else:
-                color = discord.Color.green() if signed else discord.Color.red()
-                message = (
-                    "✅ Jailbreaks.app is signed right now! This means you can install apps."
-                    if signed
-                    else "❌ Jailbreaks.app is not signed right now. This means you cannot install apps currently. There is no ETA for when it will be signed."
-                )
 
             embed = discord.Embed(description=message, color=color)
 
@@ -101,10 +95,11 @@ class StatusCog(commands.Cog):
             -# Keep in mind that expiry date does not correlate to when it is revoked, and Revocation date is for when it was previously revoked, not a date in the future.
             """).strip().replace("\n\n\n", "\n")  # remove extra newlines if no revocation date
 
-            if GLOBALLY_BLACKLISTED:
+            show_blacklist = GLOBALLY_BLACKLISTED and status == "Signed"
+            if show_blacklist:
                 description_str = "🚧 Jailbreaks.app is signed right now, but the certificate is globally blacklisted, meaning **you cannot install apps currently with this certificate.**\n\n" + description_str
 
-            embed = discord.Embed(description=description_str, color=discord.Color.orange() if GLOBALLY_BLACKLISTED else discord.Color.blue())
+            embed = discord.Embed(description=description_str, color=discord.Color.orange() if show_blacklist else discord.Color.blue())
 
             await interaction.followup.send(embed=embed)
         except Exception:
@@ -112,7 +107,7 @@ class StatusCog(commands.Cog):
             await self.send_error(interaction, "Sorry, something went wrong while fetching the certificate info.")
 
     async def update_presence(self, signed: bool):
-        if GLOBALLY_BLACKLISTED:
+        if signed and GLOBALLY_BLACKLISTED:
             await self.bot.change_presence(
                 status=discord.Status.idle,
                 activity=discord.Activity(type=discord.ActivityType.watching, name="🚧 Globally Blacklisted")
